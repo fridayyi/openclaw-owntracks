@@ -10,7 +10,7 @@ Give your AI agent GPS awareness. Zero dependencies, one Node.js file.
 ## Architecture
 
 ```
-OwnTracks app → (HTTPS via ngrok/tunnel) → server.mjs → data/
+OwnTracks app → (HTTPS via Cloudflare Tunnel) → server.mjs → data/
                                                          ├── current-location.json
                                                          └── location-log.jsonl
 ```
@@ -26,16 +26,22 @@ AUTH_USER=yi AUTH_SECRET=$(openssl rand -base64 24) node scripts/server.mjs
 
 Without `AUTH_SECRET`, the server runs open (fine for localhost, not for public URLs).
 
-### 2. Expose via tunnel (if behind NAT)
+### 2. Expose via Cloudflare Tunnel
 
 ```bash
-ngrok http 8073
+# Already configured: gps.han1.fyi → localhost:8073
+# Runs as launchd service: com.friday.cloudflared-owntracks
+# Config: ~/.cloudflared/config.yml
+# Protocol: http2 (quic blocked in China)
+
+# Manual run (if needed):
+cloudflared tunnel --protocol http2 run owntracks
 ```
 
 ### 3. Configure OwnTracks app
 
 - **Mode:** HTTP
-- **URL:** `https://<your-tunnel-domain>/`
+- **URL:** `https://gps.han1.fyi/`
 - **Authentication:** Username + password (matching AUTH_USER / AUTH_SECRET)
 - **Monitoring:** Significant (battery-friendly) or Move (precise tracking)
 

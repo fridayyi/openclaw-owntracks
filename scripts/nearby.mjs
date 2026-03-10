@@ -18,6 +18,35 @@ const DATA_DIR = resolve(process.env.DATA_DIR || join(SCRIPT_DIR, '..', 'data'))
 const CURRENT_FILE = join(DATA_DIR, 'current-location.json');
 const KEY = process.env.AMAP_API_KEY;
 
+// OwnTracks on iOS in China may report GCJ-02 coordinates (Apple's CoreLocation
+// already applies the shift). Set COORD_SYSTEM=wgs84 to enable WGS→GCJ conversion
+// (e.g. for Android or non-China devices that report raw WGS-84).
+const COORD_SYSTEM = process.env.COORD_SYSTEM || 'gcj02'; // 'gcj02' = already shifted, 'wgs84' = needs conversion
+
+// --- WGS-84 → GCJ-02 conversion (required for AMap when source is WGS-84) ---
+const _PI = Math.PI, WGS_A = 6378245.0, WGS_EE = 0.00669342162296594323;
+function outOfChina(lat, lon) { return lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271; }
+function wgs2gcj(wgsLat, wgsLon) {
+  if (outOfChina(wgsLat, wgsLon)) return [wgsLat, wgsLon];
+  let dLat = -100 + 2 * wgsLon + 3 * wgsLat + 0.2 * wgsLat * wgsLat + 0.1 * wgsLat * wgsLon + 0.2 * Math.sqrt(Math.abs(wgsLon));
+  dLat += (20 * Math.sin(6 * wgsLon * _PI) + 20 * Math.sin(2 * wgsLon * _PI)) * 2 / 3;
+  dLat += (20 * Math.sin(wgsLat * _PI) + 40 * Math.sin(wgsLat / 3 * _PI)) * 2 / 3;
+  dLat += (160 * Math.sin(wgsLat / 12 * _PI) + 320 * Math.sin(wgsLat * _PI / 30)) * 2 / 3;
+  let dLon = 300 + wgsLon + 2 * wgsLat + 0.1 * wgsLon * wgsLon + 0.1 * wgsLat * wgsLon + 0.1 * Math.sqrt(Math.abs(wgsLon));
+  dLon += (20 * Math.sin(6 * wgsLon * _PI) + 20 * Math.sin(2 * wgsLon * _PI)) * 2 / 3;
+  dLon += (20 * Math.sin(wgsLon * _PI) + 40 * Math.sin(wgsLon / 3 * _PI)) * 2 / 3;
+  dLon += (150 * Math.sin(wgsLon / 12 * _PI) + 300 * Math.sin(wgsLon / 30 * _PI)) * 2 / 3;
+  const radLat = wgsLat / 180 * _PI;
+  let magic = Math.sin(radLat); magic = 1 - WGS_EE * magic * magic;
+  const sqrtM = Math.sqrt(magic);
+  dLat = (dLat * 180) / (WGS_A * (1 - WGS_EE) / (magic * sqrtM) * _PI);
+  dLon = (dLon * 180) / (WGS_A / sqrtM * Math.cos(radLat) * _PI);
+  return [wgsLat + dLat, wgsLon + dLon];
+}
+function toGcj02(lat, lon) {
+  return COORD_SYSTEM === 'wgs84' ? wgs2gcj(lat, lon) : [lat, lon];
+}
+
 if (!KEY) {
   console.error('Missing AMAP_API_KEY. Get one at https://lbs.amap.com');
   process.exit(1);
@@ -47,7 +76,10 @@ if (!lat || !lng) {
   }
 }
 
-const url = `https://restapi.amap.com/v5/place/around?key=${KEY}&keywords=${encodeURIComponent(keyword)}&location=${lng},${lat}&radius=${radius}&show_fields=business&page_size=${limit}`;
+// Convert to GCJ-02 for AMap if needed
+const [gcjLat, gcjLon] = toGcj02(parseFloat(lat), parseFloat(lng));
+
+const url = `https://restapi.amap.com/v5/place/around?key=${KEY}&keywords=${encodeURIComponent(keyword)}&location=${gcjLon},${gcjLat}&radius=${radius}&show_fields=business&page_size=${limit}`;
 
 const res = await fetch(url);
 const data = await res.json();

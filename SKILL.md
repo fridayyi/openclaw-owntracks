@@ -136,6 +136,18 @@ tail -5 data/location-log.jsonl         # recent history
 
 Requires `AMAP_API_KEY` env var. Get a free key at https://lbs.amap.com
 
+### Coordinate System (China users)
+
+AMap requires GCJ-02 coordinates. OwnTracks on **iOS in China** reports GCJ-02 (Apple CoreLocation applies the shift), so no conversion needed (default). On **Android** or outside China, coordinates are WGS-84 — set `COORD_SYSTEM=wgs84` to enable automatic WGS→GCJ conversion:
+
+```bash
+# iOS in China (default, no conversion needed)
+node scripts/nearby.mjs "咖啡"
+
+# Android or outside China (enable WGS→GCJ conversion)
+COORD_SYSTEM=wgs84 node scripts/nearby.mjs "咖啡"
+```
+
 ```bash
 # Auto-uses current GPS location
 node scripts/nearby.mjs "咖啡"

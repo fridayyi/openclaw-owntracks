@@ -97,10 +97,33 @@ tail -5 data/location-log.jsonl         # recent history
 - **Daily journaling:** Log places visited with timestamps
 - **Safety:** Alert if no location update for extended period
 
+## Nearby Search (AMap/高德)
+
+Requires `AMAP_API_KEY` env var. Get a free key at https://lbs.amap.com
+
+```bash
+# Auto-uses current GPS location
+node scripts/nearby.mjs "咖啡"
+
+# Custom radius and explicit coordinates
+node scripts/nearby.mjs "餐厅" --radius 1000 --lat 40.033 --lng 116.417
+
+# JSON output for programmatic use
+node scripts/nearby.mjs "药店" --json
+
+# Limit results
+node scripts/nearby.mjs "便利店" --limit 5
+```
+
+Combines with GPS: if OwnTracks is running, nearby search auto-detects your location. No need to pass coordinates.
+
+**Use cases:** restaurants, cafes, pharmacies, hospitals, transit, gyms — anything in AMap's POI database (excellent coverage in China).
+
 ## Files
 
 - `scripts/server.mjs` — HTTP receiver (zero deps)
 - `scripts/query.mjs` — CLI query tool (zero deps)
+- `scripts/nearby.mjs` — AMap nearby POI search (zero deps, needs AMAP_API_KEY)
 - `scripts/places.example.json` — Example places config
 - `places.json` — Your places config (create from example, gitignored)
 - `data/` — Location data (created automatically, gitignored)

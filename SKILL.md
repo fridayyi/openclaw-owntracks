@@ -1,18 +1,18 @@
 ---
 name: owntracks
-description: Receive and query GPS location from OwnTracks iOS/Android app via a lightweight HTTP server. Use when the user asks about location tracking, "where am I", GPS awareness, geofencing, or setting up OwnTracks. Triggers on "owntracks", "location", "GPS", "where am I", "位置".
+description: Receive and query GPS location from OwnTracks iOS/Android app via a lightweight HTTP server. Supports named places (home, office, gym), semantic location queries, and location history. Use when the user asks about location tracking, "where am I", GPS awareness, geofencing, or setting up OwnTracks. Triggers on "owntracks", "location", "GPS", "where am I", "位置".
 ---
 
 # OwnTracks Location Receiver
 
-Lightweight OwnTracks HTTP endpoint that gives your agent GPS awareness.
+Give your AI agent GPS awareness. Zero dependencies, one Node.js file.
 
 ## Architecture
 
 ```
-OwnTracks app → (HTTPS via ngrok/tunnel) → receiver server → data/
-                                                              ├── current-location.json
-                                                              └── location-log.jsonl
+OwnTracks app → (HTTPS via ngrok/tunnel) → server.mjs → data/
+                                                         ├── current-location.json
+                                                         └── location-log.jsonl
 ```
 
 ## Setup
@@ -20,12 +20,11 @@ OwnTracks app → (HTTPS via ngrok/tunnel) → receiver server → data/
 ### 1. Start the receiver
 
 ```bash
-# Generate a secret and start
-node scripts/server.mjs
-# Default port: 8073. Override: PORT=9090 node scripts/server.mjs
-# Set auth: AUTH_USER=yi AUTH_SECRET=<token> node scripts/server.mjs
-# Without AUTH_SECRET, server runs without authentication (not recommended for public endpoints)
+AUTH_USER=yi AUTH_SECRET=$(openssl rand -base64 24) node scripts/server.mjs
+# Default port 8073. Override with PORT=9090
 ```
+
+Without `AUTH_SECRET`, the server runs open (fine for localhost, not for public URLs).
 
 ### 2. Expose via tunnel (if behind NAT)
 
@@ -38,34 +37,70 @@ ngrok http 8073
 - **Mode:** HTTP
 - **URL:** `https://<your-tunnel-domain>/`
 - **Authentication:** Username + password (matching AUTH_USER / AUTH_SECRET)
-- **Monitoring:** Significant (battery-friendly) or Move (precise)
+- **Monitoring:** Significant (battery-friendly) or Move (precise tracking)
 
-⚠️ Common gotcha: OwnTracks may add a trailing space when pasting the password. The server trims credentials automatically.
+⚠️ OwnTracks may add trailing spaces when pasting passwords. The server trims automatically.
+
+## Named Places
+
+Copy and edit the example:
+```bash
+cp scripts/places.example.json places.json
+# Edit places.json with your locations
+```
+
+Format:
+```json
+{
+  "places": [
+    { "name": "home", "label": "家", "lat": 40.033, "lon": 116.417, "radius": 200 },
+    { "name": "office", "label": "公司", "lat": 40.034, "lon": 116.423, "radius": 300 }
+  ]
+}
+```
+
+With places configured, queries return semantic locations ("At 家") instead of raw coordinates.
 
 ## Querying Location
 
-Read current location:
 ```bash
-cat data/current-location.json
+# Current location + nearest place
+node scripts/query.mjs
+
+# JSON output (for programmatic use)
+node scripts/query.mjs --json
+
+# Last N locations
+node scripts/query.mjs --history 5
+
+# Locations from a specific date
+node scripts/query.mjs --at 2026-03-10
+
+# List configured places
+node scripts/query.mjs --places
 ```
 
-Fields: `lat`, `lon`, `alt`, `acc` (meters), `vel` (km/h), `batt` (%), `conn` (w=wifi, m=mobile), `tid`, `tst` (epoch), `timestamp` (ISO), `receivedAt` (ISO).
-
-Query log:
+### Direct file access
 ```bash
-# Last 5 locations
-tail -5 data/location-log.jsonl
-
-# Locations from today
-grep "$(date +%Y-%m-%d)" data/location-log.jsonl
+cat data/current-location.json          # latest location
+tail -5 data/location-log.jsonl         # recent history
 ```
 
-## Running as a Service
+### Location fields
+`lat`, `lon`, `alt`, `acc` (meters), `vel` (km/h), `batt` (%), `conn` (w=wifi, m=mobile), `tid`, `tst` (epoch), `timestamp` (ISO), `receivedAt` (ISO).
 
-Use OpenClaw cron or systemd/launchd to keep the server running. Example launchd plist or cron entry left to the user's preference.
+## Use Cases for Agents
+
+- **Context awareness:** "You're still at the office at 11pm — time to head home?"
+- **Proactive help:** Detect arrival at airport → check flight status
+- **Smart home:** Detect "at home" → trigger automations
+- **Daily journaling:** Log places visited with timestamps
+- **Safety:** Alert if no location update for extended period
 
 ## Files
 
-- `scripts/server.mjs` — HTTP receiver (zero dependencies, Node.js only)
-- `data/current-location.json` — Latest location (created automatically)
-- `data/location-log.jsonl` — Append-only location history
+- `scripts/server.mjs` — HTTP receiver (zero deps)
+- `scripts/query.mjs` — CLI query tool (zero deps)
+- `scripts/places.example.json` — Example places config
+- `places.json` — Your places config (create from example, gitignored)
+- `data/` — Location data (created automatically, gitignored)

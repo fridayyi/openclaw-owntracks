@@ -53,8 +53,8 @@ Format:
 ```json
 {
   "places": [
-    { "name": "home", "label": "家", "lat": 40.033, "lon": 116.417, "radius": 200 },
-    { "name": "office", "label": "公司", "lat": 40.034, "lon": 116.423, "radius": 300 }
+    { "name": "home", "label": "Home", "lat": 37.775, "lon": -122.419, "radius": 200 },
+    { "name": "office", "label": "Office", "lat": 37.790, "lon": -122.389, "radius": 300 }
   ]
 }
 ```

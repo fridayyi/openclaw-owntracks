@@ -33,8 +33,8 @@ ngrok http 8073
 **4. Query your location**
 ```bash
 node scripts/query.mjs
-# 📍 40.033, 116.417 | acc: 8m | batt: 75% | conn: wifi
-#    📌 At 家
+# 📍 37.7749, -122.4194 | acc: 8m | batt: 75% | conn: wifi
+#    📌 At Home
 ```
 
 ## Named Places
@@ -43,8 +43,8 @@ Create `places.json` to give coordinates meaning:
 ```json
 {
   "places": [
-    { "name": "home", "label": "Home", "lat": 40.033, "lon": 116.417, "radius": 200 },
-    { "name": "office", "label": "Office", "lat": 40.034, "lon": 116.423, "radius": 300 }
+    { "name": "home", "label": "Home", "lat": 37.7749, "lon": -122.4194, "radius": 200 },
+    { "name": "office", "label": "Office", "lat": 37.7899, "lon": -122.3893, "radius": 300 }
   ]
 }
 ```
